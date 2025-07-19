@@ -4,6 +4,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs'); // For comparing passwords
 const jwt = require('jsonwebtoken'); // For generating JWT tokens
 const User = require('../models/User'); // Import the User model
+const { loginUser } = require('../controllers/auth.js');
 
 // @route   POST /api/auth/register
 // @desc    Register new user (This part should be implemented by Teammate B, or you can add it if it's not done yet)
