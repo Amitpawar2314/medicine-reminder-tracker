@@ -14,8 +14,9 @@ app.use(express.json()); // For parsing JSON request bodies
 app.use(express.urlencoded({ extended: false })); // For parsing URL-encoded form data
 app.use(cors()); // Enable CORS for all routes (important for frontend communication)
 
-// Connect auth routes to /api/auth path
-app.use('/api/auth', require('./routes/authRoutes')); // <--- THIS LINE ADDED
+// Define API routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/medicines', require('./routes/medicineRoutes')); // <--- NEW LINE ADDED!
 
 // Define a simple root route to check if server is running
 app.get('/', (req, res) => {
