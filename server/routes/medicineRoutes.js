@@ -1,20 +1,17 @@
-// server/routes/medicineRoutes.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth'); // Import our authentication middleware
-const Medicine = require('../models/Medicine'); // Import the Medicine model
+const auth = require('../middleware/auth');
+const Medicine = require('../models/Medicine');
+const MedicineLog = require('../models/MedicineLog'); // <-- NEW
 
 // @route   POST /api/medicines
 // @desc    Add new medicine
-// @access  Private (requires authentication token)
+// @access  Private
 router.post('/', auth, async (req, res) => {
-    // Extract medicine details from the request body
     const { name, dosage, frequency, times, startDate, endDate, notes, isActive } = req.body;
-
     try {
-        // req.user.id comes from the auth middleware, which extracts it from the JWT
         const newMedicine = new Medicine({
-            userId: req.user.id, // Associate the medicine with the authenticated user
+            userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
             name,
             dosage,
             frequency,
@@ -24,13 +21,136 @@ router.post('/', auth, async (req, res) => {
             notes,
             isActive
         });
+        const medicine = await newMedicine.save();
+        res.status(201).json(medicine);
+    } catch (err) {
+        console.error(err.message);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ msg: err.message });
+        }
+        res.status(500).send('Server Error');
+    }
+});
 
-        const medicine = await newMedicine.save(); // Save the new medicine to the database
-        res.status(201).json(medicine); // Respond with the created medicine and 201 Created status
+// @route   PUT /api/medicines/:id
+// @desc    Update a medicine by ID
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
+    const { name, dosage, frequency, times, startDate, endDate, notes, isActive } = req.body;
+
+    const medicineFields = {};
+    if (name) medicineFields.name = name;
+    if (dosage) medicineFields.dosage = dosage;
+    if (frequency) medicineFields.frequency = frequency;
+    if (times) medicineFields.times = times;
+    if (startDate) medicineFields.startDate = startDate;
+    if (endDate) medicineFields.endDate = endDate;
+    if (notes) medicineFields.notes = notes;
+    if (isActive !== undefined) medicineFields.isActive = isActive;
+
+    try {
+        // Authorization: only owner's medicine can be updated
+        let medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.id }); // <-- CORRECTED: Changed 'user' to 'userId'
+        if (!medicine) {
+            return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
+        }
+        medicine = await Medicine.findByIdAndUpdate(
+            req.params.id,
+            { $set: medicineFields },
+            { new: true, runValidators: true }
+        );
+        res.json(medicine);
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === 'ObjectId') {
+            return res.status(400).json({ msg: 'Invalid Medicine ID format' });
+        }
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ msg: err.message });
+        }
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   DELETE /api/medicines/:id
+// @desc    Delete a medicine by ID
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const medicine = await Medicine.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.user.id // <-- CORRECTED: Changed 'user' to 'userId'
+        });
+        if (!medicine) {
+            return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
+        }
+        res.json({ msg: 'Medicine deleted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === 'ObjectId') {
+            return res.status(400).json({ msg: 'Invalid Medicine ID format' });
+        }
+        res.status(500).send('Server error');
+    }
+});
+
+/* ================================
+    --- Add MedicineLog endpoint ---
+    ================================ */
+
+// @route   POST /api/medicines/medicinelogs
+// @desc    Mark a medicine as taken/missed for a specific scheduled time on a given date
+// @access  Private
+router.post('/medicinelogs', auth, async (req, res) => {
+    const { medicineId, date, scheduledTime, status, notes } = req.body; // status: 'taken'/'missed'
+    if (!medicineId || !date || !scheduledTime || !status) {
+        return res.status(400).json({ msg: 'Please provide medicineId, date, scheduledTime, and status' });
+    }
+
+    try {
+        const logDate = new Date(date);
+        logDate.setUTCHours(0, 0, 0, 0);
+
+        let logEntry = await MedicineLog.findOne({
+            userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
+            medicineId,
+            date: logDate,
+            scheduledTime
+        });
+
+        if (logEntry) {
+            logEntry.status = status;
+            if (status === 'taken') {
+                logEntry.takenAt = new Date();
+            } else {
+                logEntry.takenAt = undefined;
+            }
+            logEntry.notes = notes;
+        } else {
+            // Ensure the medicine exists and is owned by user
+            const medicine = await Medicine.findOne({ _id: medicineId, userId: req.user.id }); // <-- CORRECTED: Changed 'user' to 'userId'
+            if (!medicine) {
+                return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
+            }
+            logEntry = new MedicineLog({
+                userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
+                medicineId,
+                date: logDate,
+                scheduledTime,
+                status,
+                takenAt: status === 'taken' ? new Date() : undefined,
+                notes
+            });
+        }
+
+        await logEntry.save();
+        res.status(200).json(logEntry);
 
     } catch (err) {
         console.error(err.message);
-        // Check for specific validation errors (e.g., if 'name' is missing)
+        if (err.code === 11000) {
+            return res.status(400).json({ msg: 'Duplicate log entry: This medicine is already logged for this time and date.' });
+        }
         if (err.name === 'ValidationError') {
             return res.status(400).json({ msg: err.message });
         }

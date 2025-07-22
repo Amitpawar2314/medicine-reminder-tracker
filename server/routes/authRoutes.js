@@ -1,13 +1,12 @@
-// server/routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs'); // For comparing passwords
 const jwt = require('jsonwebtoken'); // For generating JWT tokens
 const User = require('../models/User'); // Import the User model
-const { loginUser } = require('../controllers/auth.js');
+const { loginUser } = require('../controllers/auth.js'); // This is the line you asked for
 
 // @route   POST /api/auth/register
-// @desc    Register new user (This part should be implemented by Teammate B, or you can add it if it's not done yet)
+// @desc    Register new user
 router.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
 
