@@ -3,7 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs'); // For comparing passwords
 const jwt = require('jsonwebtoken'); // For generating JWT tokens
 const User = require('../models/User'); // Import the User model
-const { loginUser } = require('../controllers/auth.js'); // This is the line you asked for
+const auth = require('../middleware/auth'); // Ensure auth middleware is imported here
+// const { loginUser } = require('../controllers/auth.js'); // This line is currently unused, but kept as per your request
+
 
 // @route   POST /api/auth/register
 // @desc    Register new user
@@ -90,6 +92,25 @@ router.post('/login', async (req, res) => {
             }
         );
 
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+// @route   GET /api/auth/profile
+// @desc    Get logged in user info
+// @access  Private (requires token)
+router.get('/profile', auth, async (req, res) => {
+    try {
+        // req.user.id is set by the auth middleware from the JWT payload
+        // .select('-password') ensures the password hash is NOT sent back to the client
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(user);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
