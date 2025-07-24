@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Medicine = require('../models/Medicine');
-const MedicineLog = require('../models/MedicineLog'); // <-- NEW
+const MedicineLog = require('../models/MedicineLog');
 
 // @route   POST /api/medicines
 // @desc    Add new medicine
@@ -11,7 +11,7 @@ router.post('/', auth, async (req, res) => {
     const { name, dosage, frequency, times, startDate, endDate, notes, isActive } = req.body;
     try {
         const newMedicine = new Medicine({
-            userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
+            userId: req.user.id, // Make sure your schema matches!
             name,
             dosage,
             frequency,
@@ -49,8 +49,7 @@ router.put('/:id', auth, async (req, res) => {
     if (isActive !== undefined) medicineFields.isActive = isActive;
 
     try {
-        // Authorization: only owner's medicine can be updated
-        let medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.id }); // <-- CORRECTED: Changed 'user' to 'userId'
+        let medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.id });
         if (!medicine) {
             return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
         }
@@ -79,7 +78,7 @@ router.delete('/:id', auth, async (req, res) => {
     try {
         const medicine = await Medicine.findOneAndDelete({
             _id: req.params.id,
-            userId: req.user.id // <-- CORRECTED: Changed 'user' to 'userId'
+            userId: req.user.id
         });
         if (!medicine) {
             return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
@@ -95,14 +94,14 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 /* ================================
-    --- Add MedicineLog endpoint ---
-    ================================ */
+    --- MedicineLog endpoints ---
+   ================================ */
 
 // @route   POST /api/medicines/medicinelogs
 // @desc    Mark a medicine as taken/missed for a specific scheduled time on a given date
 // @access  Private
 router.post('/medicinelogs', auth, async (req, res) => {
-    const { medicineId, date, scheduledTime, status, notes } = req.body; // status: 'taken'/'missed'
+    const { medicineId, date, scheduledTime, status, notes } = req.body;
     if (!medicineId || !date || !scheduledTime || !status) {
         return res.status(400).json({ msg: 'Please provide medicineId, date, scheduledTime, and status' });
     }
@@ -112,7 +111,7 @@ router.post('/medicinelogs', auth, async (req, res) => {
         logDate.setUTCHours(0, 0, 0, 0);
 
         let logEntry = await MedicineLog.findOne({
-            userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
+            userId: req.user.id,
             medicineId,
             date: logDate,
             scheduledTime
@@ -128,12 +127,12 @@ router.post('/medicinelogs', auth, async (req, res) => {
             logEntry.notes = notes;
         } else {
             // Ensure the medicine exists and is owned by user
-            const medicine = await Medicine.findOne({ _id: medicineId, userId: req.user.id }); // <-- CORRECTED: Changed 'user' to 'userId'
+            const medicine = await Medicine.findOne({ _id: medicineId, userId: req.user.id });
             if (!medicine) {
                 return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
             }
             logEntry = new MedicineLog({
-                userId: req.user.id, // <-- CORRECTED: Changed 'user' to 'userId'
+                userId: req.user.id,
                 medicineId,
                 date: logDate,
                 scheduledTime,
@@ -154,6 +153,43 @@ router.post('/medicinelogs', auth, async (req, res) => {
         if (err.name === 'ValidationError') {
             return res.status(400).json({ msg: err.message });
         }
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET /api/medicines/medicinelogs
+// @desc    Get all medicine log entries for the authenticated user, optionally filtered by date range
+// @access  Private
+router.get('/medicinelogs', auth, async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query; // Get optional query parameters
+
+        let query = { userId: req.user.id }; // Always filter by the authenticated user
+
+        // Add date range filtering if parameters are provided
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) {
+                const startOfDay = new Date(startDate);
+                startOfDay.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
+                query.date.$gte = startOfDay;
+            }
+            if (endDate) {
+                const endOfDay = new Date(endDate);
+                endOfDay.setUTCHours(23, 59, 59, 999); // Normalize to end of day UTC
+                query.date.$lte = endOfDay;
+            }
+        }
+
+        // Fetch logs, populate medicine details, and sort by date/time
+        const logs = await MedicineLog.find(query)
+                                      .populate('medicineId', 'name dosage times') // Populate medicine details
+                                      .sort({ date: -1, scheduledTime: -1 }); // Sort by most recent date, then time
+
+        res.json(logs);
+
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });

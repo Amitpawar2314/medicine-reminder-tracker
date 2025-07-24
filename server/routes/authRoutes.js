@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs'); // For comparing passwords
+const bcrypt = require('bcryptjs'); // For hashing/comparing passwords
 const jwt = require('jsonwebtoken'); // For generating JWT tokens
 const User = require('../models/User'); // Import the User model
-const auth = require('../middleware/auth'); // Ensure auth middleware is imported here
-// const { loginUser } = require('../controllers/auth.js'); // This line is currently unused, but kept as per your request
-
+const auth = require('../middleware/auth'); // JWT authentication middleware
 
 // @route   POST /api/auth/register
 // @desc    Register new user
@@ -48,13 +46,11 @@ router.post('/register', async (req, res) => {
                 res.json({ token }); // Send token back to client
             }
         );
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
-
 
 // @route   POST /api/auth/login
 // @desc    Authenticate user & get token
@@ -74,30 +70,27 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        // 3. If credentials match, create JWT payload
+        // 3. Create JWT payload & token
         const payload = {
             user: {
                 id: user.id // Mongoose provides .id as a string version of _id
             }
         };
 
-        // 4. Sign the token
         jwt.sign(
             payload,
-            process.env.JWT_SECRET, // Your secret from .env
-            { expiresIn: '1h' }, // Token expiration (e.g., 1 hour)
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' },
             (err, token) => {
                 if (err) throw err;
-                res.json({ token }); // Send the token back to the client
+                res.json({ token });
             }
         );
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
-
 
 // @route   GET /api/auth/profile
 // @desc    Get logged in user info

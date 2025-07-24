@@ -3,6 +3,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import medicineService from '../services/medicineService';
 import AddMedicineForm from '../components/AddMedicineForm';
 
+// added the TodaysSchedule component to the Dashboard day 5
+import TodaysSchedule from '../components/TodaysSchedule';
+
 const Dashboard = () => {
   const [medicines, setMedicines] = useState([]);
   const [error, setError] = useState('');
@@ -26,6 +29,8 @@ const Dashboard = () => {
   return (
     <div>
       <h2>Your Medicine Dashboard</h2>
+// added TodaysSchedule component to the Dashboard day 5
+      <TodaysSchedule allMedicines={medicines} />
       <hr />
       <AddMedicineForm onMedicineAdded={fetchMedicines} />
       <hr />
