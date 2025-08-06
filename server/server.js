@@ -16,7 +16,7 @@ app.use(cors()); // Enable CORS for all routes (important for frontend communica
 
 // Define API routes
 app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/medicines', require('./routes/medicineRoutes')); // <--- NEW LINE ADDED!
+app.use('/api/medicines', require('./routes/medicineRoutes'));
 
 // Define a simple root route to check if server is running
 app.get('/', (req, res) => {

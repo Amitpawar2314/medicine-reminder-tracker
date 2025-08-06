@@ -3,10 +3,18 @@ const jwt = require('jsonwebtoken');
 
 // This middleware will be used on routes that require authentication
 module.exports = function(req, res, next) {
-    // Get token from header
-    const token = req.header('x-auth-token'); // Common practice to send token in x-auth-token header
+    // Get token from the Authorization header (standard practice with axios)
+    let token = req.header('Authorization');
 
-    // Check if no token
+    if (token) {
+        // If an Authorization header exists, extract the token from the "Bearer <token>" string
+        token = token.replace('Bearer ', '');
+    } else {
+        // As a fallback, check for the token in the x-auth-token header
+        token = req.header('x-auth-token');
+    }
+
+    // Check if no token was found in either header
     if (!token) {
         return res.status(401).json({ msg: 'No token, authorization denied' });
     }

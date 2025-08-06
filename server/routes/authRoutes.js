@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken'); // For generating JWT tokens
 const User = require('../models/User'); // Import the User model
 const auth = require('../middleware/auth'); // JWT authentication middleware
 
+// The line below is present in your code but is unused, as the logic is inline.
+// const { loginUser } = require('../controllers/auth.js'); 
+
 // @route   POST /api/auth/register
 // @desc    Register new user
 router.post('/register', async (req, res) => {

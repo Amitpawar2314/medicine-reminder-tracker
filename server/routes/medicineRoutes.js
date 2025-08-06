@@ -11,7 +11,7 @@ router.post('/', auth, async (req, res) => {
     const { name, dosage, frequency, times, startDate, endDate, notes, isActive } = req.body;
     try {
         const newMedicine = new Medicine({
-            userId: req.user.id, // Make sure your schema matches!
+            userId: req.user.id,
             name,
             dosage,
             frequency,
@@ -32,12 +32,25 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
+// @route   GET /api/medicines
+// @desc    Get all medicines for a single user
+// @access  Private
+router.get('/', auth, async (req, res) => {
+    try {
+        // Fetch all medicines that belong to the authenticated user
+        const medicines = await Medicine.find({ userId: req.user.id });
+        res.status(200).json(medicines);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   PUT /api/medicines/:id
 // @desc    Update a medicine by ID
 // @access  Private
 router.put('/:id', auth, async (req, res) => {
     const { name, dosage, frequency, times, startDate, endDate, notes, isActive } = req.body;
-
     const medicineFields = {};
     if (name) medicineFields.name = name;
     if (dosage) medicineFields.dosage = dosage;
@@ -93,10 +106,6 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
-/* ================================
-    --- MedicineLog endpoints ---
-   ================================ */
-
 // @route   POST /api/medicines/medicinelogs
 // @desc    Mark a medicine as taken/missed for a specific scheduled time on a given date
 // @access  Private
@@ -105,7 +114,6 @@ router.post('/medicinelogs', auth, async (req, res) => {
     if (!medicineId || !date || !scheduledTime || !status) {
         return res.status(400).json({ msg: 'Please provide medicineId, date, scheduledTime, and status' });
     }
-
     try {
         const logDate = new Date(date);
         logDate.setUTCHours(0, 0, 0, 0);
@@ -126,7 +134,6 @@ router.post('/medicinelogs', auth, async (req, res) => {
             }
             logEntry.notes = notes;
         } else {
-            // Ensure the medicine exists and is owned by user
             const medicine = await Medicine.findOne({ _id: medicineId, userId: req.user.id });
             if (!medicine) {
                 return res.status(404).json({ msg: 'Medicine not found or user not authorized' });
@@ -141,10 +148,8 @@ router.post('/medicinelogs', auth, async (req, res) => {
                 notes
             });
         }
-
         await logEntry.save();
         res.status(200).json(logEntry);
-
     } catch (err) {
         console.error(err.message);
         if (err.code === 11000) {
@@ -162,32 +167,28 @@ router.post('/medicinelogs', auth, async (req, res) => {
 // @access  Private
 router.get('/medicinelogs', auth, async (req, res) => {
     try {
-        const { startDate, endDate } = req.query; // Get optional query parameters
+        const { startDate, endDate } = req.query;
+        let query = { userId: req.user.id };
 
-        let query = { userId: req.user.id }; // Always filter by the authenticated user
-
-        // Add date range filtering if parameters are provided
         if (startDate || endDate) {
             query.date = {};
             if (startDate) {
                 const startOfDay = new Date(startDate);
-                startOfDay.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
+                startOfDay.setUTCHours(0, 0, 0, 0);
                 query.date.$gte = startOfDay;
             }
             if (endDate) {
                 const endOfDay = new Date(endDate);
-                endOfDay.setUTCHours(23, 59, 59, 999); // Normalize to end of day UTC
+                endOfDay.setUTCHours(23, 59, 59, 999);
                 query.date.$lte = endOfDay;
             }
         }
-
-        // Fetch logs, populate medicine details, and sort by date/time
         const logs = await MedicineLog.find(query)
-                                      .populate('medicineId', 'name dosage times') // Populate medicine details
-                                      .sort({ date: -1, scheduledTime: -1 }); // Sort by most recent date, then time
+            .populate('medicineId', 'name dosage times')
+            .sort({ date: -1, scheduledTime: -1 });
 
-        res.json(logs);
-
+        const validLogs = logs.filter(log => log.medicineId !== null);
+        res.json(validLogs);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
