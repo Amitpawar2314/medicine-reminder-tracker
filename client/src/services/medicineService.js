@@ -9,8 +9,10 @@ const getToken = () => localStorage.getItem('token');
 // Create an instance of axios with the authorization header
 const getAuthHeaders = () => {
   const token = getToken();
+  if (!token) return {}; // Return empty object if no token
   return {
     headers: {
+      // The "Bearer " prefix is crucial
       Authorization: `Bearer ${token}`
     }
   };
