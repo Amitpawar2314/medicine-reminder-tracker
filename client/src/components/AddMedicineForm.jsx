@@ -1,69 +1,90 @@
-// client/src/components/AddMedicineForm.jsx
 import React, { useState } from 'react';
 import medicineService from '../services/medicineService';
 
 // The onMedicineAdded prop is a function passed from the Dashboard to refresh the list
 const AddMedicineForm = ({ onMedicineAdded }) => {
-  const [name, setName] = useState('');
-  const [dosage, setDosage] = useState('');
-  const [schedule, setSchedule] = useState(['']); // Start with one empty time input
-  const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        dosage: '',
+        frequency: '',
+        times: [''], // Use 'times' to match the backend schema
+        notes: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-  const handleScheduleChange = (index, value) => {
-    const newSchedule = [...schedule];
-    newSchedule[index] = value;
-    setSchedule(newSchedule);
-  };
+    const { name, dosage, frequency, times, notes } = formData;
 
-  const addScheduleTime = () => {
-    setSchedule([...schedule, '']);
-  };
+    const onChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+    const handleTimeChange = (index, value) => {
+        const newTimes = [...times];
+        newTimes[index] = value;
+        setFormData({ ...formData, times: newTimes });
+    };
 
-    try {
-      const medicineData = { name, dosage, schedule: schedule.filter(time => time) };
-      await medicineService.addMedicine(medicineData);
-      // Clear the form
-      setName('');
-      setDosage('');
-      setSchedule(['']);
-      // Notify the parent component to refresh the medicine list
-      onMedicineAdded();
-    } catch (err) {
-      setError(err.response?.data?.msg || 'Failed to add medicine');
-    }
-  };
+    const addTimeField = () => {
+        setFormData({ ...formData, times: [...times, ''] });
+    };
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <h3>Add New Medicine</h3>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <div>
-        <label>Name:</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      </div>
-      <div>
-        <label>Dosage (e.g., "1 pill"):</label>
-        <input type="text" value={dosage} onChange={(e) => setDosage(e.target.value)} required />
-      </div>
-      <div>
-        <label>Schedule Times:</label>
-        {schedule.map((time, index) => (
-          <input
-            key={index}
-            type="time"
-            value={time}
-            onChange={(e) => handleScheduleChange(index, e.target.value)}
-          />
-        ))}
-        <button type="button" onClick={addScheduleTime}>+ Add Time</button>
-      </div>
-      <button type="submit">Add Medicine</button>
-    </form>
-  );
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setError('Please log in to add a medicine.');
+            setLoading(false);
+            return;
+        }
+
+        const medicineData = {
+            ...formData,
+            times: formData.times.filter(time => time) // Filter out any empty time strings
+        };
+
+        try {
+            await medicineService.addMedicine(medicineData, token);
+            setFormData({ name: '', dosage: '', frequency: '', times: [''], notes: '' });
+            onMedicineAdded();
+        } catch (err) {
+            setError(err.response?.data?.msg || 'Failed to add medicine');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ padding: '1rem', border: '1px solid #eee', borderRadius: '8px' }}>
+            <h3>Add New Medicine</h3>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            <form onSubmit={handleSubmit}>
+                <input type="text" name="name" value={name} onChange={onChange} placeholder="Name" required style={{ width: '100%', padding: '8px', marginBottom: '10px' }} />
+                <input type="text" name="dosage" value={dosage} onChange={onChange} placeholder="Dosage" style={{ width: '100%', padding: '8px', marginBottom: '10px' }} />
+                <input type="text" name="frequency" value={frequency} onChange={onChange} placeholder="Frequency" style={{ width: '100%', padding: '8px', marginBottom: '10px' }} />
+                
+                {times.map((time, index) => (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                        <input type="time" value={time} onChange={(e) => handleTimeChange(index, e.target.value)} style={{ flexGrow: 1, padding: '8px' }} />
+                        {index === times.length - 1 && (
+                            <button type="button" onClick={addTimeField} style={{ marginLeft: '10px', padding: '8px 12px' }}>
+                                + Add Time
+                            </button>
+                        )}
+                    </div>
+                ))}
+                
+                <textarea name="notes" value={notes} onChange={onChange} placeholder="Notes" style={{ width: '100%', padding: '8px', marginBottom: '10px' }} />
+                
+                <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+                    {loading ? 'Adding...' : 'Add Medicine'}
+                </button>
+            </form>
+        </div>
+    );
 };
 
 export default AddMedicineForm;

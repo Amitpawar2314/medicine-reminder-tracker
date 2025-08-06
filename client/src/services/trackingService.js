@@ -1,35 +1,38 @@
 // client/src/services/trackingService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/tracking'; // Adjust if your backend port is different
+// The base URL for tracking logs, as defined by our backend routes
+const API_URL = 'http://localhost:5000/api/medicines/medicinelogs';
 
 // Function to get the auth token from local storage
 const getToken = () => localStorage.getItem('token');
 
-// Create an instance of axios with the authorization header
+// Create a headers object with the authorization header
 const getAuthHeaders = () => {
-  const token = getToken();
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  };
+    const token = getToken();
+    if (!token) return {}; // Returns an empty object if there's no token
+    return {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    };
 };
 
 // Get all of today's tracking logs for the user
 const getTodaysLogs = () => {
-  return axios.get(`${API_URL}/today`, getAuthHeaders());
+    const today = new Date().toISOString().split('T')[0]; // Format today's date as YYYY-MM-DD
+    return axios.get(`${API_URL}?date=${today}`, getAuthHeaders());
 };
 
-// Mark a medicine as taken
-const logMedicineTaken = (logData) => {
-  // logData should be an object like { medicineId, date, time }
-  return axios.post(API_URL, logData, getAuthHeaders());
+// Mark a medicine as taken or missed
+const logMedicineStatus = (logData) => {
+    // logData should be an object like { medicineId, date, scheduledTime, status }
+    return axios.post(API_URL, logData, getAuthHeaders());
 };
 
 const trackingService = {
-  getTodaysLogs,
-  logMedicineTaken,
+    getTodaysLogs,
+    logMedicineStatus,
 };
 
 export default trackingService;

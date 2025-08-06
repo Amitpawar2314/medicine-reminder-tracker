@@ -1,36 +1,29 @@
-// client/src/services/medicineService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/medicines'; // Adjust if your backend port is different
+// This is the correct API endpoint for medicine CRUD operations
+const API_URL = 'http://localhost:5000/api/medicines';
 
-// Function to get the auth token from local storage
-const getToken = () => localStorage.getItem('token');
-
-// Create an instance of axios with the authorization header
-const getAuthHeaders = () => {
-  const token = getToken();
-  if (!token) return {}; // Return empty object if no token
-  return {
-    headers: {
-      // The "Bearer " prefix is crucial
-      Authorization: `Bearer ${token}`
-    }
-  };
+const getMedicines = (token) => {
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    };
+    return axios.get(API_URL, config);
 };
 
-// Get all medicines for the logged-in user
-const getMedicines = () => {
-  return axios.get(API_URL, getAuthHeaders());
-};
-
-// Add a new medicine
-const addMedicine = (medicineData) => {
-  return axios.post(API_URL, medicineData, getAuthHeaders());
+const addMedicine = (medicineData, token) => {
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    };
+    return axios.post(API_URL, medicineData, config);
 };
 
 const medicineService = {
-  getMedicines,
-  addMedicine,
+    getMedicines,
+    addMedicine,
 };
 
 export default medicineService;
