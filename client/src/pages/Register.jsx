@@ -1,4 +1,3 @@
-// client/src/pages/Register.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -33,11 +32,10 @@ const Register = () => {
                 password,
             });
             
-            // Set success message and redirect after a short delay
             setSuccess('Registration successful!');
             setTimeout(() => {
                 navigate('/login');
-            }, 1000); // Redirect after 1 second
+            }, 1000);
 
         } catch (err) {
             setError(err.response?.data?.msg || 'Registration failed. Please try again.');
@@ -47,11 +45,10 @@ const Register = () => {
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
+        <div className="container" style={{ maxWidth: '400px' }}>
             <h2>Sign Up</h2>
             <form onSubmit={onSubmit}>
-                {/* ... (input fields and buttons remain the same) ... */}
-                <div>
+                <div style={{ textAlign: 'left' }}>
                     <label>Username</label>
                     <input
                         type="text"
@@ -60,10 +57,9 @@ const Register = () => {
                         value={username}
                         onChange={onChange}
                         required
-                        style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
                     />
                 </div>
-                <div>
+                <div style={{ textAlign: 'left' }}>
                     <label>Email Address</label>
                     <input
                         type="email"
@@ -72,10 +68,9 @@ const Register = () => {
                         value={email}
                         onChange={onChange}
                         required
-                        style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
                     />
                 </div>
-                <div>
+                <div style={{ textAlign: 'left' }}>
                     <label>Password</label>
                     <input
                         type="password"
@@ -85,14 +80,13 @@ const Register = () => {
                         onChange={onChange}
                         minLength="6"
                         required
-                        style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
                     />
                 </div>
                 
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                {success && <p style={{ color: 'green' }}>{success}</p>}
+                {error && <p className="text-error">{error}</p>}
+                {success && <p className="text-success">{success}</p>}
 
-                <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px' }}>
+                <button type="submit" disabled={loading}>
                     {loading ? 'Registering...' : 'Sign Up'}
                 </button>
             </form>
