@@ -1,7 +1,9 @@
+console.log("VITE_API_URL is:", import.meta.env.VITE_API_URL);
 import axios from 'axios';
 
 // This is the correct API endpoint for medicine CRUD operations
-const API_URL = 'http://localhost:5000/api/medicines';
+// const API_URL = 'http://localhost:5000/api/medicines';
+const API_URL = '${import.meta.env.VITE_API_URL}/api/medicines';
 
 const getMedicines = (token) => {
     const config = {

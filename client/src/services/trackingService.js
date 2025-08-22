@@ -2,7 +2,8 @@
 import axios from 'axios';
 
 // The base URL for tracking logs, as defined by our backend routes
-const API_URL = 'http://localhost:5000/api/medicines/medicinelogs';
+// const API_URL = 'http://localhost:5000/api/medicines/medicinelogs';
+const API_URL = '${import.meta.env.VITE_API_URL}/api/medicines';
 
 // Function to get the auth token from local storage
 const getToken = () => localStorage.getItem('token');
